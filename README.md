@@ -40,7 +40,7 @@ The easiest way to run NeuroRacer is using **Docker Compose**.
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/your-username/NeuroRacer.git
+    git clone https://github.com/akc0r/NeuroRacer.git
     cd NeuroRacer
     ```
 
@@ -92,5 +92,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ---
 
 <p align="center">
-  Built with ❤️ by [Your Name]
+  Built with ❤️ by akc0r
 </p>
