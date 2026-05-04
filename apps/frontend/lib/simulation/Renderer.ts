@@ -1,6 +1,6 @@
-// ──────────────────────────────────────────────
+// ──────────────────────────────────────────────────
 // Canvas renderer for track, cars, and sensors
-// ──────────────────────────────────────────────
+// ──────────────────────────────────────────────────
 
 import { Car } from "./Car";
 import { Track } from "./Track";
@@ -12,15 +12,15 @@ const CAR_COLORS = {
   dead: "#52525b",   // Gray — dead
 };
 
-/** Draw the track (road surface, walls, checkpoints) */
+/** Draw the track (road surface, walls, checkpoints, centerline) */
 export function drawTrack(ctx: CanvasRenderingContext2D, track: Track): void {
   // Canvas background
-  ctx.fillStyle = "#18181b"; // slightly darker background
+  ctx.fillStyle = "#18181b";
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
   // Road surface (filled polygon between inner and outer limits)
   if (track.outerPoints.length > 0 && track.innerPoints.length > 0) {
-    ctx.fillStyle = "#27272a"; // road color
+    ctx.fillStyle = "#27272a";
     ctx.beginPath();
     // Outer boundary (clockwise)
     ctx.moveTo(track.outerPoints[0].x, track.outerPoints[0].y);
@@ -36,6 +36,23 @@ export function drawTrack(ctx: CanvasRenderingContext2D, track: Track): void {
     }
     ctx.closePath();
     ctx.fill("evenodd");
+  }
+
+  // Racing line (centerline) — subtle dashed line
+  if (track.centerPoints && track.centerPoints.length > 1) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(168, 85, 247, 0.08)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([8, 12]);
+    ctx.beginPath();
+    ctx.moveTo(track.centerPoints[0].x, track.centerPoints[0].y);
+    for (let i = 1; i < track.centerPoints.length; i++) {
+      ctx.lineTo(track.centerPoints[i].x, track.centerPoints[i].y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
   }
 
   // Outer walls
@@ -58,19 +75,46 @@ export function drawTrack(ctx: CanvasRenderingContext2D, track: Track): void {
   ctx.stroke();
 
   // Checkpoints
-  ctx.fillStyle = "rgba(168, 85, 247, 0.15)";
+  ctx.fillStyle = "rgba(168, 85, 247, 0.12)";
   for (const cp of track.checkpoints) {
     ctx.beginPath();
-    ctx.arc(cp.x, cp.y, 12, 0, Math.PI * 2);
+    ctx.arc(cp.x, cp.y, 10, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Start position marker
+  // Start position marker with direction arrow
   const [sx, sy] = track.startPosition;
   ctx.fillStyle = "#22c55e";
   ctx.beginPath();
   ctx.arc(sx, sy, 6, 0, Math.PI * 2);
   ctx.fill();
+
+  // Start direction indicator
+  const arrowLen = 18;
+  const arrowX = sx + Math.cos(track.startAngle) * arrowLen;
+  const arrowY = sy + Math.sin(track.startAngle) * arrowLen;
+  ctx.strokeStyle = "#22c55e";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(arrowX, arrowY);
+  ctx.stroke();
+
+  // Arrowhead
+  const headLen = 6;
+  const headAngle = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(arrowX, arrowY);
+  ctx.lineTo(
+    arrowX - Math.cos(track.startAngle - headAngle) * headLen,
+    arrowY - Math.sin(track.startAngle - headAngle) * headLen
+  );
+  ctx.moveTo(arrowX, arrowY);
+  ctx.lineTo(
+    arrowX - Math.cos(track.startAngle + headAngle) * headLen,
+    arrowY - Math.sin(track.startAngle + headAngle) * headLen
+  );
+  ctx.stroke();
 }
 
 /** Draw a single car (triangle shape) + its sensor rays */
@@ -79,7 +123,7 @@ export function drawCar(
   car: Car,
   rank: number
 ): void {
-  const alpha = car.alive ? 1 : 0.2;
+  const alpha = car.alive ? 1 : 0.15;
   let color: string;
 
   if (rank === 0 && car.alive) {

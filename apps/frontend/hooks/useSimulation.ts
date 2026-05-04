@@ -8,7 +8,7 @@ import { useRef, useState, useCallback } from "react";
 import { NeuralNetwork } from "@/lib/simulation/NeuralNetwork";
 import { Car } from "@/lib/simulation/Car";
 import { Track } from "@/lib/simulation/Track";
-import { nextGeneration } from "@/lib/simulation/GeneticAlgorithm";
+import { nextGeneration, resetAdaptiveState, getAdaptiveState } from "@/lib/simulation/GeneticAlgorithm";
 import { drawTrack, drawCar } from "@/lib/simulation/Renderer";
 import { CONFIG } from "@/lib/config";
 import { api } from "@/lib/api";
@@ -103,7 +103,7 @@ export function useSimulation(canvasRef: React.RefObject<HTMLCanvasElement | nul
             population_size: CONFIG.POPULATION_SIZE,
             best_fitness: bestGenFitness,
             avg_fitness: totalGenFitness / cars.length,
-            mutation_rate: CONFIG.MUTATION_RATE,
+            mutation_rate: getAdaptiveState().adaptiveMutationRate,
             best_brain_weights: cars[bestIdx].brain.serialize(),
             checkpoints_passed: Math.max(...cars.map((c) => c.checkpoints)),
             frames_survived: frameRef.current,
@@ -161,11 +161,11 @@ export function useSimulation(canvasRef: React.RefObject<HTMLCanvasElement | nul
 
     let initialBrains: NeuralNetwork[];
     if (loadedBrain) {
-      // Seed all cars with the loaded brain + mutations
+      // Seed population with loaded brain — one exact copy, rest are clones
+      // (the GA will mutate them on the next generation transition)
       initialBrains = Array.from(
         { length: CONFIG.POPULATION_SIZE },
-        (_, i) => i === 0 ? loadedBrain.clone() : loadedBrain.clone() // one exact copy, others maybe mutate? actually let the GA handle nextgen.
-        // Actually slightly better to just use it as all brains, the nextGeneration will mutate them.
+        () => loadedBrain.clone()
       );
     } else {
       initialBrains = Array.from(
@@ -199,6 +199,10 @@ export function useSimulation(canvasRef: React.RefObject<HTMLCanvasElement | nul
     frameRef.current = 0;
     carsRef.current = [];
     brainsRef.current = [];
+
+    // Reset adaptive mutation state
+    resetAdaptiveState();
+
     setStats({
       generation: 0,
       aliveCars: 0,
